@@ -1,92 +1,547 @@
-function doGet(e) {
-  return handleRequest(e);
+// =============================================
+// PLAN INVERNAL 2026 — TSB S.A.
+// app.js — Lógica de la aplicación
+// =============================================
+
+const S = {
+  sc: 'reg', u: null,
+  done: new Set(),
+  cur: null,
+  as: {}, ac: {}, af: {},
+  ea: {}, es: false, er: null, ei: 0
+};
+
+function upd() {
+  const p = Math.round(S.done.size / TOPICS.length * 100);
+  document.getElementById('prog').style.width = p + '%';
+  document.getElementById('prog-lbl').textContent = S.done.size + ' de ' + TOPICS.length + ' tópicos completados';
 }
 
-function doPost(e) {
-  return handleRequest(e);
+function render() {
+  const m = document.getElementById('main');
+  if (S.sc === 'reg') rReg(m);
+  else if (S.sc === 'menu') rMenu(m);
+  else if (S.sc === 'topic') rTopic(m);
+  else if (S.sc === 'eval') rEval(m);
+  else if (S.sc === 'cert') rCert(m);
 }
 
-function handleRequest(e) {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const sheet = ss.getSheetByName('progreso');
+// ---- REGISTER ----
+function rReg(el) {
+  el.innerHTML = `
+    <div class="card">
+      <h2>Identificación del colaborador</h2>
+      <p>Completá tus datos para iniciar el Plan Invernal 2026</p>
+      <div class="form-row">
+        <div class="fg"><label>Nombre</label><input id="fn" type="text" placeholder="Ej: Juan" autocomplete="given-name"></div>
+        <div class="fg"><label>Apellido</label><input id="ln" type="text" placeholder="Ej: García" autocomplete="family-name"></div>
+      </div>
+      <div class="form-row">
+        <div class="fg"><label>DNI (sin puntos)</label><input id="dn" type="text" inputmode="numeric" placeholder="Ej: 30123456" maxlength="9"></div>
+        <div class="fg"><label>Unidad Operativa</label>
+          <select id="uo">
+            <option value="">Seleccioná...</option>
+            <option>Allen</option>
+            <option>Añelo</option>
+            <option>Catriel</option>
+            <option>Malargue</option>
+            <option>PIN</option>
+            <option>Rincon De Los Sauces</option>
+          </select>
+        </div>
+      <div class="form-row">
+        <div class="fg" style="grid-column:1/-1"><label>Empresa</label>
+          <select id="emp">
+            <option value="">Seleccioná...</option>
+            <option>ANDREU</option>
+            <option>BARRUETO</option>
+            <option>CAMSUR</option>
+            <option>CERRO NEGRO</option>
+            <option>EL SOSNEADO</option>
+            <option>GEOSAR</option>
+            <option>GREEN SUPPLY</option>
+            <option>GRIFFOULIRE</option>
+            <option>GUSTAVO OLIVARES</option>
+            <option>HAR</option>
+            <option>KOSKEN</option>
+            <option>LA GRINGA</option>
+            <option>LA NACIONAL</option>
+            <option>LAS MALVINAS</option>
+            <option>MAURICIO MANZANARES</option>
+            <option>OTAMENDI</option>
+            <option>PG</option>
+            <option>PROLOGIT</option>
+            <option>SOFITA</option>
+            <option>TN</option>
+            <option>TSB</option>
+            <option>VDN</option>
+            <option>VECTOR D/SUR</option>
+          </select>
+        </div>
+      </div>
+      </div>
+      <button class="btn-p" onclick="goStart()">Iniciar Plan Invernal ❄</button>
+    </div>`;
+}
 
-    // ---- GET: devolver todos los registros ----
-    if (!e.postData) {
-      const data = sheet.getDataRange().getValues();
-      const headers = data[0];
-      const rows = data.slice(1).map(row => {
-        const obj = {};
-        headers.forEach((h, i) => obj[h] = row[i]);
-        return obj;
-      }).filter(r => r.dni);
-      return ContentService
-        .createTextOutput(JSON.stringify(rows))
-        .setMimeType(ContentService.MimeType.JSON);
+function goStart() {
+  const fn = document.getElementById('fn').value.trim();
+  const ln = document.getElementById('ln').value.trim();
+  const dn = document.getElementById('dn').value.trim();
+  const uo = document.getElementById('uo').value;
+  const empresa = document.getElementById('emp') ? document.getElementById('emp').value : '';
+  if (!fn || !ln || !dn || !uo || !empresa) { alert('Por favor completá todos los campos incluyendo la empresa.'); return; }
+  if (!/^\d{7,9}$/.test(dn)) { alert('El DNI debe contener solo números (entre 7 y 9 dígitos).'); return; }
+  S.u = { fn, ln, dn, uo, empresa, date: new Date().toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' }) };
+  S.sc = 'menu';
+  saveProgress();
+  trackProgress('inicio');
+  render();
+}
+
+// ---- MENU ----
+function rMenu(el) {
+  upd();
+  const allDone = S.done.size === TOPICS.length;
+  const cats = [...new Set(TOPICS.map(t => t.cat))];
+  let h = `<div style="background:linear-gradient(135deg,#E6F1FB,#EAF3DE);border:1px solid var(--blue-border);border-radius:var(--r);padding:1.2rem 1.4rem;margin-bottom:1.2rem">
+    <div style="font-size:11px;font-weight:700;color:var(--blue-mid);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">🎯 Objetivo del Plan Invernal 2026</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6">Garantizar la seguridad del personal, los equipos y la continuidad operativa durante las condiciones climáticas adversas del período invernal. Prevenir incidentes relacionados con bajas temperaturas, nieve, escarcha y hielo mediante la capacitación activa de todos los colaboradores.</p>
+    <div style="margin-top:8px;display:flex;gap:16px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--blue)">📅 Inicio: <strong>04/06/2026</strong></span>
+      <span style="font-size:12px;color:var(--blue)">📅 Fin: <strong>31/08/2026</strong></span>
+      <span style="font-size:12px;color:var(--green)">✅ Aprobación: <strong>80% (8/10 correctas)</strong></span>
+      <span style="font-size:12px;color:var(--green)">🔄 Intentos: <strong>3 máximo</strong></span>
+    </div>
+  </div>`;
+  cats.forEach(cat => {
+    h += `<p class="cat-lbl">${cat}</p><div class="tgrid">`;
+    TOPICS.filter(t => t.cat === cat).forEach(t => {
+      const d = S.done.has(t.id);
+      h += `<div class="tc ${d ? 'done' : ''}" onclick="oTopic('${t.id}')">
+        <div class="tc-chk">✓</div>
+        <div class="tc-icon">${t.icon}</div>
+        <div class="tc-title">${t.title}</div>
+        <div class="tc-sub">${t.sub}</div>
+      </div>`;
+    });
+    h += '</div>';
+  });
+  h += `<div class="eval-wrap">
+    <button class="btn-p" onclick="oEval()" ${allDone ? '' : 'disabled'}>
+      ${allDone ? '📝 Realizar evaluación final' : '🔒 Completá todos los tópicos para desbloquear la evaluación'}
+    </button>
+    ${!allDone ? `<p class="locked-msg">Faltan ${TOPICS.length - S.done.size} tópico(s) por completar</p>` : ''}
+  </div>`;
+  el.innerHTML = h;
+}
+
+// ---- TOPIC VIEW ----
+function oTopic(id) {
+  S.cur = TOPICS.find(t => t.id === id);
+  S.sc = 'topic';
+  render();
+  window.scrollTo(0, 0);
+}
+
+function rTopic(el) {
+  const t = S.cur;
+  const actDone = S.ac[t.id];
+  let h = `<button class="back-btn" onclick="gMenu()">← Volver al menú</button>
+  <div class="tv">
+    <div class="tv-hdr">
+      <span class="tv-icon">${t.icon}</span>
+      <div><h2>${t.title}</h2><p>${t.sub}</p></div>
+    </div>`;
+
+  if (t.img) h += `<img src="${t.img}" alt="${t.imgAlt || ''}" class="topic-img" loading="lazy">`;
+
+  t.sections.forEach(s => {
+    h += `<div class="sb"><h3>${s.h}</h3>`;
+    if (s.p) h += `<p>${s.p}</p>`;
+    if (s.items) {
+      h += '<div class="cl">';
+      s.items.forEach(i => h += `<div class="ci"><span class="ci-dot">›</span>${i}</div>`);
+      h += '</div>';
     }
-
-    // ---- POST: crear, actualizar o eliminar ----
-    let payload;
-    try {
-      // Try JSON first
-      payload = JSON.parse(e.postData.contents);
-    } catch(ex) {
-      // Try form-encoded (URLSearchParams with 'data' field)
-      const params = e.postData.contents.split('&');
-      for (const p of params) {
-        const [k, v] = p.split('=');
-        if (decodeURIComponent(k) === 'data') {
-          payload = JSON.parse(decodeURIComponent(v.replace(/\+/g, ' ')));
-          break;
-        }
-      }
+    if (s.twin) {
+      h += '<div class="two-col">';
+      s.twin.forEach(col => {
+        h += `<div class="vc"><h4>${col.h}</h4><ul class="vc-list">`;
+        col.li.forEach(li => h += `<li>${li}</li>`);
+        h += '</ul></div>';
+      });
+      h += '</div>';
     }
-
-    if (!payload) throw new Error('No payload received');
-
-    const data = sheet.getDataRange().getValues();
-    const headers = data[0];
-    const dniCol = headers.indexOf('dni');
-
-    // Buscar fila existente por DNI
-    let rowIndex = -1;
-    for (let i = 1; i < data.length; i++) {
-      if (String(data[i][dniCol]) === String(payload.dni)) {
-        rowIndex = i + 1;
-        break;
-      }
+    if (s.bases) {
+      h += '<div class="bgrid">';
+      s.bases.forEach(b => h += `<div class="bi"><strong>${b}</strong></div>`);
+      h += '</div>';
     }
+    h += '</div>';
+  });
 
-    // ELIMINAR registro
-    if (payload._action === 'delete') {
-      if (rowIndex > 0) {
-        sheet.deleteRow(rowIndex);
-        return ContentService
-          .createTextOutput(JSON.stringify({ ok: true }))
-          .setMimeType(ContentService.MimeType.JSON);
-      } else {
-        return ContentService
-          .createTextOutput(JSON.stringify({ ok: false, error: 'Registro no encontrado' }))
-          .setMimeType(ContentService.MimeType.JSON);
-      }
-    }
-
-    // CREAR o ACTUALIZAR registro
-    const rowData = headers.map(h => payload[h] !== undefined ? payload[h] : '');
-
-    if (rowIndex > 0) {
-      sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
-    } else {
-      sheet.appendRow(rowData);
-    }
-
-    return ContentService
-      .createTextOutput(JSON.stringify({ ok: true }))
-      .setMimeType(ContentService.MimeType.JSON);
-
-  } catch(err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ error: err.message }))
-      .setMimeType(ContentService.MimeType.JSON);
+  if (t.alert) {
+    const cls = t.alert.t === 'warn' ? 'aw' : t.alert.t === 'danger' ? 'ad' : t.alert.t === 'success' ? 'as' : 'ai';
+    const icon = t.alert.t === 'danger' ? '⛔' : t.alert.t === 'warn' ? '⚠️' : 'ℹ️';
+    h += `<div class="ab ${cls}"><span class="ab-icon">${icon}</span><p>${t.alert.text}</p></div>`;
   }
+
+  h += rAct(t);
+  h += `<button class="done-btn" id="db-${t.id}" onclick="mDone('${t.id}')" ${actDone ? '' : 'disabled'}>
+    ✓ Marcar como completado y volver al menú
+  </button></div>`;
+
+  el.innerHTML = h;
+}
+
+// ---- ACTIVITY ----
+function rAct(t) {
+  const a = t.act;
+  if (!a) return '';
+  const ck = S.af[t.id];
+  const sel = S.as[t.id];
+  const letters = ['A', 'B', 'C', 'D'];
+  let h = `<div class="act">
+    <div class="act-hdr">🎯 Actividad — verificá tu comprensión</div>
+    <p>Respondé correctamente para habilitar el botón de completado.</p>
+    <div class="act-q">${a.q}</div>`;
+
+  a.opts.forEach((o, i) => {
+    let c = '';
+    if (ck) c = i === a.ans ? 'ok' : (sel === i && sel !== a.ans ? 'ng' : '');
+    else c = sel === i ? 'sel' : '';
+    h += `<div class="ao ${c}" onclick="${ck ? '' : 'aSel(\'' + t.id + '\',' + i + ')'}">
+      <span class="ao-ltr">${ck ? (i === a.ans ? '✓' : (sel === i ? '✗' : letters[i])) : (sel === i ? '●' : letters[i])}</span>
+      ${o}
+    </div>`;
+  });
+
+  if (!ck) {
+    h += `<button class="act-btn" onclick="chkAct('${t.id}')" ${sel !== undefined ? '' : 'disabled'}>Verificar respuesta</button>`;
+  }
+  if (ck) {
+    const ok = S.as[t.id] === a.ans;
+    h += `<div class="afb ${ok ? 'ok' : 'ng'}">${ok ? '✓ ' + a.ok : '✗ ' + a.ng}</div>`;
+    if (!ok) h += `<button class="act-btn retry-btn" onclick="retryAct('${t.id}')">↺ Intentar de nuevo</button>`;
+  }
+  h += '</div>';
+  return h;
+}
+
+function aSel(id, i) { S.as[id] = i; render(); }
+
+function chkAct(id) {
+  const t = TOPICS.find(x => x.id === id);
+  S.af[id] = true;
+  if (S.as[id] === t.act.ans) {
+    S.ac[id] = true;
+    const b = document.getElementById('db-' + id);
+    if (b) b.disabled = false;
+  }
+  render();
+}
+
+function retryAct(id) {
+  delete S.af[id]; delete S.as[id]; delete S.ac[id];
+  render();
+}
+
+function mDone(id) {
+  if (!S.ac[id]) return;
+  S.done.add(id);
+  S.sc = 'menu';
+  saveProgress();
+  trackProgress('topico');
+  render();
+}
+
+function gMenu() { S.sc = 'menu'; render(); }
+function gMenuFromCert() { S.sc = 'menu'; render(); }
+
+// ---- EVALUATION ----
+function oEval() {
+  if (S.done.size < TOPICS.length) return;
+  S.sc = 'eval'; S.ea = {}; S.es = false; S.er = null;
+  render(); window.scrollTo(0, 0);
+}
+
+function rEval(el) {
+  const answered = Object.keys(S.ea).length;
+  let h = `<button class="back-btn" onclick="gMenu()">← Volver al menú</button>
+  <div class="ev">
+    <div class="ev-hdr">
+      <h2>📝 Evaluación final — Plan Invernal 2026</h2>
+      <p>Debés responder correctamente al menos <strong>8 de 10 preguntas</strong> (80%) para obtener tu certificado${S.ei > 0 ? ' · Intento #' + (S.ei + 1) : ''}</p>
+      ${!S.es ? `<p class="ev-prog">Respondidas: <span>${answered}</span> de ${QUESTIONS.length}</p>` : ''}
+    </div>`;
+
+  if (S.es && S.er !== null) {
+    if (S.er) {
+      const sc = QUESTIONS.filter((q, i) => S.ea[i] === q.ans).length;
+      h += `<div class="rb pass"><h3>¡Aprobaste! 🎉</h3><p>Respondiste ${sc} de 10 correctamente (${sc*10}%). ¡Excelente trabajo!</p></div>`;
+      h += `<button class="sub-btn" onclick="gCert()">🏆 Obtener mi certificado</button>`;
+    } else {
+      const c = QUESTIONS.filter((_, i) => S.ea[i] === QUESTIONS[i].ans).length;
+      const attLeft = 3 - S.ei;
+      h += `<div class="rb fail"><h3>No alcanzaste el 80% requerido</h3><p>Respondiste ${c} de 10 correctamente (${c*10}%). Necesitás al menos 8 correctas.${attLeft > 0 ? ` Te quedan <strong>${attLeft} intento(s)</strong>.` : ' <strong>No quedan más intentos.</strong> Contactá a tu supervisor.'}</p></div>`;
+    }
+  }
+
+  QUESTIONS.forEach((q, qi) => {
+    const sel = S.ea[qi], sub = S.es;
+    const letters = ['A', 'B', 'C', 'D'];
+    h += `<div class="qb">
+      <div class="qn">Pregunta ${qi + 1} de ${QUESTIONS.length}</div>
+      <div class="qt">${q.q}</div>`;
+    q.opts.forEach((o, oi) => {
+      let c = '';
+      if (sub) c = oi === q.ans ? 'ok' : ''; // Only highlight correct, not wrong
+      else c = sel === oi ? 'sel' : '';
+      h += `<div class="ao ${c}" onclick="${sub ? '' : 'eSel(' + qi + ',' + oi + ')'}">
+        <span class="ao-ltr">${sub ? (oi === q.ans ? '✓' : letters[oi]) : (sel === oi ? '●' : letters[oi])}</span>
+        ${letters[oi]}. ${o}
+      </div>`;
+    });
+    h += '</div>';
+  });
+
+  if (!S.es) {
+    const all = Object.keys(S.ea).length === QUESTIONS.length;
+    h += `<button class="sub-btn" ${all ? '' : 'disabled'} onclick="subEv()">${all ? 'Enviar respuestas' : 'Respondé todas las preguntas para continuar'}</button>`;
+  } else if (!S.er) {
+    if (S.ei < 3) {
+      h += `<button class="sub-btn" onclick="retryEv()">🔄 Volver a intentar (intento ${S.ei + 1} de 3)</button>`;
+    } else {
+      h += `<div style="text-align:center;padding:1rem;font-size:13px;color:var(--danger-tx)">Agotaste los 3 intentos. Por favor contactá a tu supervisor.</div>`;
+    }
+  }
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function eSel(qi, oi) { S.ea[qi] = oi; render(); }
+
+function subEv() {
+  S.es = true;
+  const correct = QUESTIONS.filter((q, i) => S.ea[i] === q.ans).length;
+  S.er = correct >= 8; // 80% - 8 out of 10
+  S.score = correct;
+  if (!S.er) S.ei++;
+  render(); window.scrollTo(0, 0);
+}
+
+function retryEv() { if (S.ei >= 3) return; S.ea = {}; S.es = false; S.er = null; render(); }
+
+function gCert() { 
+  S.sc = 'cert';
+  S.certified = true;
+  saveProgress();
+  trackProgress('certificado');
+  render(); 
+  window.scrollTo(0, 0);
+  if (S.u) submitToForms(S.u);
+}
+
+// ---- CERTIFICATE ----
+function rCert(el) {
+  const u = S.u;
+  // Build URL params for standalone certificate page
+  const score = (S.score !== null && S.score !== undefined) ? S.score : 10;
+  const pct = score * 10;
+  const params = new URLSearchParams({
+    name: u.fn + ' ' + u.ln,
+    dni: u.dn,
+    uo: u.uo,
+    empresa: u.empresa || '',
+    date: u.date,
+    score: score,
+    pct: pct
+  });
+  const certUrl = 'certificado.html?' + params.toString();
+  
+  el.innerHTML = `
+    <button class="back-btn" onclick="gMenu()">← Volver al inicio</button>
+    <div class="card" style="text-align:center;padding:2.5rem">
+      <div style="font-size:52px;margin-bottom:1rem">🥇</div>
+      <h2 style="color:var(--blue);margin-bottom:8px">¡Felicitaciones, ${u.fn}!</h2>
+      <p style="color:var(--text2);font-size:14px;margin-bottom:1.5rem">Completaste el Plan Invernal 2026 con el <strong>${pct}%</strong> de respuestas correctas (${score} de 10).</p>
+      
+      <div style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem;max-width:480px;margin:0 auto 1.5rem;text-align:left">
+        <div style="font-size:13px;color:var(--text2);line-height:2">
+          <strong style="color:var(--text)">Nombre:</strong> ${u.fn} ${u.ln}<br>
+          <strong style="color:var(--text)">DNI:</strong> ${u.dn}<br>
+          <strong style="color:var(--text)">Unidad Operativa:</strong> ${u.uo}<br>
+          <strong style="color:var(--text)">Empresa:</strong> ${u.empresa || ''}<br>
+          <strong style="color:var(--text)">Fecha:</strong> ${u.date}
+        </div>
+      </div>
+      
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a href="${certUrl}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#0C447C,#185FA5);color:#fff;text-decoration:none;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:700;box-shadow:0 2px 8px rgba(12,68,124,.3)">
+          🖨️ Ver e imprimir certificado
+        </a>
+        <button onclick="gMenuFromCert()" style="background:transparent;border:1.5px solid var(--blue-mid);color:var(--blue-mid);border-radius:8px;padding:12px 24px;font-size:14px;cursor:pointer;font-weight:600">
+          📚 Repasar tópicos
+        </button>
+      </div>
+      <p style="font-size:12px;color:var(--text3);margin-top:1rem">Se abrirá el certificado en una nueva pestaña. Usá Ctrl+P para guardarlo como PDF.</p>
+    </div>`;
+}
+
+
+function printCert() { /* handled by certificado.html */ }
+
+
+
+// =============================================
+// SHEETDB — Seguimiento en tiempo real
+// =============================================
+const API_URL = 'https://script.google.com/macros/s/AKfycbzYuH1mbx-MpA0JOc_B43SikH0-1hq-ytV2sI68opV-_GyI_IQxZxRVnqQSdWNUcdt_QA/exec';
+
+async function trackProgress(action) {
+  if (!S.u) return;
+  const topicsDetail = [...S.done].join(',');
+  const pct = Math.round((S.done.size / TOPICS.length) * 100);
+  const estado = S.certified ? 'Certificado' : S.done.size > 0 ? 'En progreso' : 'Iniciado';
+  
+  const payload = {
+    dni: S.u.dn,
+    nombre: S.u.fn,
+    apellido: S.u.ln,
+    uo: S.u.uo || '',
+    empresa: S.u.empresa || '',
+    topicos_completados: S.done.size,
+    porcentaje: pct,
+    topicos_detalle: topicsDetail,
+    estado: estado,
+    puntaje: S.certified ? (S.score * 10) + '%' : '',
+    fecha_inicio: S.u.date,
+    fecha_cert: S.certified ? S.u.date : ''
+  };
+
+  try {
+    // no-cors + NO headers = no preflight = works with Apps Script
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(payload));
+    
+    await fetch(API_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: formData
+    });
+  } catch(e) {
+    console.log('API sync error (non-blocking):', e);
+  }
+}
+
+// =============================================
+// GOOGLE FORMS INTEGRATION — REGISTRO DE COMPLETADOS
+// Form ID: 1J6ds_l7El8ewmEPj_Eh4tqhbiPNiaD0bbPt7Tf-zGwI
+// =============================================
+function submitToForms(user) {
+  const FORM_ID = '1FAIpQLSdZsWi0iARR3kdqe3tj69d4bLCTGFTdEtl-8QGJAIhPyZlx-Q';
+  const BASE_URL = 'https://docs.google.com/forms/d/e/' + FORM_ID + '/formResponse';
+  
+  const progressPct = Math.round((S.done.size / 9) * 100);
+  const params = new URLSearchParams({
+    'entry.1341209651': user.fn,
+    'entry.1026852883': user.ln,
+    'entry.1915930370': user.dn,
+    'entry.2005130874': user.uo,
+    'entry.2078018585': user.date,
+    // Note: add 'empresa' field to Google Form and replace EMPRESA with its entry ID
+    // 'entry.XXXXXXXX': user.empresa || '',
+    'submit': 'Submit'
+  });
+  
+  // Method 1: fetch no-cors
+  fetch(BASE_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params.toString()
+  }).catch(() => {});
+  
+  // Method 2: hidden iframe fallback
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+    const form = iframe.contentDocument.createElement('form');
+    form.method = 'POST';
+    form.action = BASE_URL;
+    params.forEach((v, k) => {
+      const input = iframe.contentDocument.createElement('input');
+      input.type = 'hidden'; input.name = k; input.value = v;
+      form.appendChild(input);
+    });
+    iframe.contentDocument.body.appendChild(form);
+    form.submit();
+    setTimeout(() => { try { document.body.removeChild(iframe); } catch(e){} }, 3000);
+  } catch(e) {}
+}
+
+
+// =============================================
+// PERSISTENCIA — Guardar y recuperar progreso
+// =============================================
+const STORAGE_KEY = 'planinvernal2026_progress';
+
+function saveProgress() {
+  try {
+    const data = {
+      u: S.u,
+      done: [...S.done],
+      ac: S.ac,
+      as: S.as,
+      af: S.af,
+      certified: S.certified || false,
+      score: (S.score !== null && S.score !== undefined) ? S.score : null,
+      ts: Date.now()
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch(e) {}
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    // Expire after 90 days
+    if (Date.now() - data.ts > 90 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+    if (data.u) {
+      S.u = data.u;
+      S.done = new Set(data.done || []);
+      S.ac = data.ac || {};
+      S.as = data.as || {};
+      S.af = data.af || {};
+      S.certified = data.certified || false;
+      S.score = (data.score !== undefined && data.score !== null) ? data.score : null;
+      S.sc = S.certified ? 'cert' : 'menu';
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+function clearProgress() {
+  try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+}
+
+// ---- INIT ----
+if (loadProgress()) {
+  // Show resume banner
+  const certBtn = S.certified ? '<a href="certificado.html?' + new URLSearchParams({name: S.u.fn+' '+S.u.ln, dni: S.u.dn, uo: S.u.uo||'', empresa: S.u.empresa||'', date: S.u.date, score: S.score||0, pct: (S.score||0)*10}).toString() + '" target="_blank" style="background:#185FA5;color:#fff;text-decoration:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:600;white-space:nowrap">🏆 Ver certificado</a>' : '';
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:#EAF3DE;border:1px solid #C0DD97;border-radius:8px;padding:10px 16px;margin-bottom:12px;font-size:13px;color:#27500A;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap';
+  banner.innerHTML = '<span>👋 Bienvenido/a de vuelta <strong>' + S.u.fn + '</strong>. ' + (S.certified ? '🥇 Plan completado con <strong>' + (S.score||0)*10 + '%</strong>' : 'Retomás desde donde dejaste (' + S.done.size + ' de 9 tópicos completados)') + '</span><div style="display:flex;gap:8px;align-items:center">' + certBtn + '<button onclick="this.parentElement.parentElement.remove()" style="background:transparent;border:none;cursor:pointer;font-size:16px;color:#3B6D11">✕</button></div>';
+  document.querySelector('.app').insertBefore(banner, document.getElementById('main'));
+  render();
+} else {
+  render();
 }
