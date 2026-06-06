@@ -358,9 +358,9 @@ function closeModal() {
 // ---- DELETE ----
 let dniToDelete = '';
 
-function confirmDelete(el) {
-  const dni = el.getAttribute('data-dni');
-  const nombre = el.getAttribute('data-nombre');
+function pendingDelete(dni, nombre) { confirmDelete(dni, nombre); }
+
+function confirmDelete(dni, nombre) {
   dniToDelete = dni;
   document.getElementById('delete-name').textContent = nombre + ' — DNI: ' + dni;
   document.getElementById('delete-pwd').value = '';
