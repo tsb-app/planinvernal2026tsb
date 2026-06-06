@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Seguimiento — Plan Invernal 2026 TSB</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh}
+.hdr{background:#0C447C;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.hdr-logo{height:40px;filter:brightness(0) invert(1);object-fit:contain}
+.hdr-title{color:#fff;font-size:16px;font-weight:600}
+.hdr-badge{background:rgba(255,255,255,.15);color:#fff;font-size:12px;padding:4px 12px;border-radius:20px}
+.wrap{max-width:1100px;margin:0 auto;padding:1.5rem}
+
+/* Login */
+.login-wrap{max-width:380px;margin:80px auto;background:#fff;border-radius:14px;padding:2rem;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.login-wrap h2{font-size:20px;font-weight:700;color:#0C447C;margin-bottom:6px}
+.login-wrap p{font-size:13px;color:#888;margin-bottom:1.5rem}
+.inp{width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:12px;outline:none}
+.inp:focus{border-color:#185FA5}
+.btn-login{width:100%;background:#0C447C;color:#fff;border:none;border-radius:8px;padding:11px;font-size:14px;cursor:pointer;font-weight:700}
+.btn-login:hover{opacity:.9}
+.login-err{color:#A32D2D;font-size:13px;margin-top:8px;display:none}
+
+/* Stats cards */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:1.5rem}
+.stat{background:#fff;border-radius:12px;padding:1.2rem;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.stat-val{font-size:32px;font-weight:700;color:#0C447C;line-height:1}
+.stat-lbl{font-size:12px;color:#888;margin-top:4px}
+.stat.green .stat-val{color:#3B6D11}
+.stat.amber .stat-val{color:#B8760A}
+.stat.red .stat-val{color:#A32D2D}
+
+/* Filters */
+.filters{background:#fff;border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.2rem;display:flex;gap:10px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.filters input,.filters select{border:1px solid #ddd;border-radius:8px;padding:7px 12px;font-size:13px;outline:none}
+.filters input:focus,.filters select:focus{border-color:#185FA5}
+.btn-exp{background:#3B6D11;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:600;margin-left:auto}
+.btn-ref{background:#185FA5;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;cursor:pointer;font-weight:600}
+
+/* Table */
+.tbl-wrap{background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+table{width:100%;border-collapse:collapse}
+th{background:#0C447C;color:#fff;padding:10px 14px;font-size:12px;font-weight:600;text-align:left;white-space:nowrap}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tr:hover td{background:#f8faff}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-ok{background:#EAF3DE;color:#3B6D11}
+.badge-prog{background:#FFF3CD;color:#856404}
+.badge-no{background:#FCEBEB;color:#A32D2D}
+.prog-bar-row{background:#e8e8e8;border-radius:20px;height:8px;width:120px;overflow:hidden;display:inline-block;vertical-align:middle}
+.prog-bar-fill{height:8px;border-radius:20px;background:linear-gradient(90deg,#185FA5,#7DC941);transition:width .4s}
+.prog-text{font-size:12px;color:#555;margin-left:6px;vertical-align:middle}
+.empty{text-align:center;padding:3rem;color:#aaa;font-size:14px}
+.loading{text-align:center;padding:3rem;color:#888;font-size:14px}
+
+/* Detail modal */
+.modal-bg{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:1.5rem;max-width:520px;width:90%;max-height:80vh;overflow-y:auto}
+.modal h3{font-size:17px;font-weight:700;color:#0C447C;margin-bottom:1rem}
+.modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:#888}
+.topic-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:13px}
+.topic-row:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="hdr">
+    <img src="logo_transparent.png" class="hdr-logo" alt="TSB">
+    <span class="hdr-title">Panel de Seguimiento — Plan Invernal 2026</span>
+    <span class="hdr-badge">Acceso restringido</span>
+  </div>
+  <div class="login-wrap">
+    <h2>🔒 Acceso al panel</h2>
+    <p>Ingresá tu contraseña para ver el seguimiento del Plan Invernal 2026</p>
+    <input type="password" id="pwd" class="inp" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="login-err">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- MAIN PANEL -->
+<div id="main-panel" style="display:none">
+  <div class="hdr">
+    <img src="logo_transparent.png" class="hdr-logo" alt="TSB">
+    <span class="hdr-title">Panel de Seguimiento — Plan Invernal 2026</span>
+    <span class="hdr-badge" id="last-update">Cargando...</span>
+  </div>
+  <div class="wrap">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="stat-total">—</div><div class="stat-lbl">Total registrados</div></div>
+      <div class="stat green"><div class="stat-val" id="stat-cert">—</div><div class="stat-lbl">Certificados (aprobaron)</div></div>
+      <div class="stat amber"><div class="stat-val" id="stat-prog">—</div><div class="stat-lbl">En progreso</div></div>
+      <div class="stat red"><div class="stat-val" id="stat-pend">—</div><div class="stat-lbl">Sin completar</div></div>
+      <div class="stat"><div class="stat-val" id="stat-avg">—</div><div class="stat-lbl">Promedio de avance</div></div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <input type="text" id="search" placeholder="🔍 Buscar por nombre o DNI..." oninput="filterTable()" style="width:240px">
+      <select id="filter-uo" onchange="filterTable()">
+        <option value="">Todas las unidades</option>
+        <option>Allen</option><option>Añelo</option><option>Catriel</option>
+        <option>Malargüe</option><option>PIN</option><option>Rincon De Los Sauces</option>
+      </select>
+      <select id="filter-status" onchange="filterTable()">
+        <option value="">Todos los estados</option>
+        <option value="cert">Certificados</option>
+        <option value="prog">En progreso</option>
+        <option value="pend">Sin iniciar</option>
+      </select>
+      <button class="btn-ref" onclick="loadData()">↻ Actualizar</button>
+      <button class="btn-exp" onclick="exportCSV()">⬇ Exportar CSV</button>
+    </div>
+
+    <!-- Table -->
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Nombre y Apellido</th>
+            <th>DNI</th>
+            <th>Unidad Operativa</th>
+            <th>Empresa</th>
+            <th>Avance</th>
+            <th>Estado</th>
+            <th>Puntaje</th>
+            <th>Fecha</th>
+            <th>Detalle</th>
+            <th>Eliminar</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body">
+          <tr><td colspan="10" class="loading">Cargando datos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-bg" id="delete-modal">
+  <div class="modal" style="max-width:400px">
+    <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+    <h3 style="color:#A32D2D">🗑️ Eliminar registro</h3>
+    <p style="font-size:13px;color:#555;margin:12px 0">Vas a eliminar el registro de:</p>
+    <div id="delete-name" style="font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:16px;padding:10px;background:#FCEBEB;border-radius:8px;text-align:center"></div>
+    <p style="font-size:13px;color:#555;margin-bottom:8px">Ingresá la contraseña de eliminación para confirmar:</p>
+    <input type="password" id="delete-pwd" class="inp" placeholder="Contraseña de eliminación" onkeydown="if(event.key==='Enter')doDelete()">
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button onclick="doDelete()" style="flex:1;background:#A32D2D;color:#fff;border:none;border-radius:8px;padding:10px;font-size:14px;cursor:pointer;font-weight:700">Eliminar</button>
+      <button onclick="closeDeleteModal()" style="flex:1;background:transparent;border:1.5px solid #ddd;border-radius:8px;padding:10px;font-size:14px;cursor:pointer">Cancelar</button>
+    </div>
+    <div id="delete-err" style="color:#A32D2D;font-size:13px;margin-top:8px;display:none">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h3 id="modal-name">Detalle del colaborador</h3>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+// =============================================
+// CONFIG — Cambiar contraseña y Google Sheet ID
+// =============================================
+const ADMIN_PASS = 'tsb2026'; // Contraseña de acceso al panel
+const DELETE_PASS = 'eliminar2026'; // Contraseña para eliminar registros
+const API_URL = 'https://script.google.com/macros/s/AKfycbzYuH1mbx-MpA0JOc_B43SikH0-1hq-ytV2sI68opV-_GyI_IQxZxRVnqQSdWNUcdt_QA/exec';
+const TOTAL_TOPICS = 9;
+const TOPIC_NAMES = [
+  't1','t2','t3','t4','t5','t6','t7','t8','t9'
+];
+const TOPIC_LABELS = [
+  'Movilidad Segura',
+  'Kit de invierno',
+  'Conducción en condiciones invernales',
+  'Riesgo de fatiga y somnolencia',
+  'Campaña 7 pasos',
+  'Línea de fuego y puntos ciegos',
+  'Prevención de incendios',
+  'Uso del agua y superficies congeladas',
+  'Salud invernal'
+];
+
+const TOPICS = [
+  'Movilidad Segura',
+  'Kit de invierno',
+  'Conducción en condiciones invernales',
+  'Riesgo de fatiga y somnolencia',
+  'Campaña 7 pasos',
+  'Línea de fuego y puntos ciegos',
+  'Prevención de incendios',
+  'Uso del agua y superficies congeladas',
+  'Salud invernal'
+];
+
+let allData = [];
+let filteredData = [];
+
+function doLogin() {
+  const pwd = document.getElementById('pwd').value;
+  if (pwd === ADMIN_PASS) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-panel').style.display = 'block';
+    loadData();
+  } else {
+    document.getElementById('login-err').style.display = 'block';
+    setTimeout(() => document.getElementById('login-err').style.display = 'none', 2500);
+  }
+}
+
+async function loadData() {
+  document.getElementById('tbl-body').innerHTML = '<tr><td colspan="10" class="loading">⏳ Cargando datos en tiempo real...</td></tr>';
+  try {
+    const res = await fetch(API_URL + '?method=GET');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const rows = await res.json();
+    
+    allData = rows.map((row, i) => ({
+      id: i + 1,
+      nombre: row.nombre || '',
+      apellido: row.apellido || '',
+      dni: String(row.dni || ''),
+      uo: row.uo || '',
+      empresa: row.empresa || '—',
+      fecha: row.fecha_inicio || '',
+      fechaCert: row.fecha_cert || '',
+      pct: parseInt(row.porcentaje || 0),
+      topicosCompletados: parseInt(row.topicos_completados || 0),
+      topicosDetalle: row.topicos_detalle || '',
+      estado: row.estado || 'Iniciado',
+      puntaje: row.puntaje || '',
+      certified: (row.estado || '').toLowerCase() === 'certificado'
+    }));
+    
+    document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-AR') + ' (' + allData.length + ' registros)';
+    updateStats();
+    filterTable();
+  } catch(e) {
+    document.getElementById('tbl-body').innerHTML = '<tr><td colspan="10" class="empty">⚠️ Error al cargar datos: ' + e.message + '</td></tr>';
+    document.getElementById('last-update').textContent = 'Error de conexión';
+  }
+  // Auto-refresh every 60 seconds
+  setTimeout(loadData, 60000);
+}
+
+function updateStats() {
+  const total = allData.length;
+  const cert = allData.filter(r => r.certified).length;
+  const prog = allData.filter(r => !r.certified && r.pct > 0).length;
+  const pend = allData.filter(r => !r.certified && r.pct === 0).length;
+  const avg = total > 0 ? Math.round(allData.reduce((s,r) => s + r.pct, 0) / total) : 0;
+  
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-cert').textContent = cert;
+  document.getElementById('stat-prog').textContent = prog;
+  document.getElementById('stat-pend').textContent = pend;
+  document.getElementById('stat-avg').textContent = avg + '%';
+}
+
+function filterTable() {
+  const search = document.getElementById('search').value.toLowerCase();
+  const uo = document.getElementById('filter-uo').value;
+  const status = document.getElementById('filter-status').value;
+  
+  filteredData = allData.filter(r => {
+    const name = (r.nombre + ' ' + r.apellido).toLowerCase();
+    const matchSearch = !search || name.includes(search) || r.dni.includes(search);
+    const matchUO = !uo || r.uo === uo;
+    const matchStatus = !status || 
+      (status === 'cert' && r.certified) ||
+      (status === 'prog' && !r.certified && r.pct > 0) ||
+      (status === 'pend' && r.pct === 0);
+    return matchSearch && matchUO && matchStatus;
+  });
+  
+  renderTable();
+}
+
+function renderTable() {
+  if (filteredData.length === 0) {
+    document.getElementById('tbl-body').innerHTML = '<tr><td colspan="10" class="empty">No se encontraron registros</td></tr>';
+    return;
+  }
+  
+  document.getElementById('tbl-body').innerHTML = filteredData.map((r, i) => {
+    const statusBadge = r.certified 
+      ? '<span class="badge badge-ok">✓ Certificado</span>'
+      : r.pct > 0 
+        ? '<span class="badge badge-prog">En progreso</span>'
+        : '<span class="badge badge-no">Sin iniciar</span>';
+    
+    return `<tr>
+      <td style="color:#aaa">${i+1}</td>
+      <td><strong>${r.nombre} ${r.apellido}</strong></td>
+      <td style="font-family:monospace">${r.dni}</td>
+      <td>${r.uo || '—'}</td>
+      <td>${r.empresa || '—'}</td>
+      <td>
+        <div class="prog-bar-row"><div class="prog-bar-fill" style="width:${r.pct}%"></div></div>
+        <span class="prog-text">${r.pct}%</span>
+      </td>
+      <td>${statusBadge}</td>
+      <td>${r.puntaje ? (String(r.puntaje).includes('%') ? r.puntaje : Math.round(parseFloat(r.puntaje)*100)+'%') : '—'}</td>
+      <td style="color:#aaa;font-size:12px">${r.fecha || '—'}</td>
+      <td><button onclick="showDetail(${i})" style="background:none;border:1px solid #ddd;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer">Ver</button></td>
+      <td><button onclick="confirmDelete('${r.dni}','${r.nombre} ${r.apellido}')" style="background:#FCEBEB;border:1px solid #F7C1C1;border-radius:6px;padding:4px 10px;font-size:13px;cursor:pointer;color:#A32D2D;font-weight:700">🗑️</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function showDetail(idx) {
+  const r = filteredData[idx];
+  const completedIds = r.topicosDetalle ? r.topicosDetalle.split(',').filter(x=>x) : [];
+  
+  const topicRows = TOPIC_LABELS.map((label, i) => {
+    const tid = 't' + (i+1);
+    const done = completedIds.includes(tid);
+    return `<div class="topic-row">
+      <span>${label}</span>
+      <span style="color:${done?'#3B6D11':'#aaa'};font-weight:600">${done?'✓ Completado':'Pendiente'}</span>
+    </div>`;
+  }).join('');
+  
+  document.getElementById('modal-name').textContent = r.nombre + ' ' + r.apellido;
+  document.getElementById('modal-content').innerHTML = `
+    <div style="background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:1rem;font-size:13px;line-height:2">
+      <strong>DNI:</strong> ${r.dni}<br>
+      <strong>Unidad Operativa:</strong> ${r.uo || '—'}<br>
+      <strong>Empresa:</strong> ${r.empresa || '—'}<br>
+      <strong>Fecha de inicio:</strong> ${r.fecha || '—'}<br>
+      <strong>Fecha de certificado:</strong> ${r.fechaCert || '—'}<br>
+      <strong>Estado:</strong> ${r.certified ? '✅ Certificado' : r.pct > 0 ? '⏳ En progreso' : '🔵 Iniciado'}<br>
+      <strong>Avance:</strong> ${r.topicosCompletados} de 9 tópicos (${r.pct}%)<br>
+      <strong>Puntaje evaluación:</strong> ${r.puntaje ? (String(r.puntaje).includes('%') ? r.puntaje : Math.round(parseFloat(r.puntaje)*100)+'%') : 'No completó la evaluación aún'}
+    </div>
+    <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:8px">Detalle por tópico:</div>
+    ${topicRows}`;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+// ---- DELETE ----
+let dniToDelete = '';
+
+function confirmDelete(el) {
+  const dni = el.getAttribute('data-dni');
+  const nombre = el.getAttribute('data-nombre');
+  dniToDelete = dni;
+  document.getElementById('delete-name').textContent = nombre + ' — DNI: ' + dni;
+  document.getElementById('delete-pwd').value = '';
+  document.getElementById('delete-err').style.display = 'none';
+  document.getElementById('delete-modal').classList.add('open');
+  setTimeout(() => document.getElementById('delete-pwd').focus(), 100);
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.remove('open');
+  dniToDelete = '';
+}
+
+async function doDelete() {
+  const pwd = document.getElementById('delete-pwd').value;
+  if (pwd !== DELETE_PASS) {
+    document.getElementById('delete-err').style.display = 'block';
+    setTimeout(() => document.getElementById('delete-err').style.display = 'none', 2500);
+    return;
+  }
+  
+  try {
+    const btn = document.querySelector('#delete-modal button');
+    btn.textContent = 'Eliminando...';
+    btn.disabled = true;
+    
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ _action: 'delete', dni: dniToDelete })
+    });
+    const data = await res.json();
+    
+    if (data.ok) {
+      closeDeleteModal();
+      // Remove from local data immediately
+      allData = allData.filter(r => String(r.dni) !== String(dniToDelete));
+      updateStats();
+      filterTable();
+      // Show success toast
+      showToast('✓ Registro eliminado correctamente', '#3B6D11');
+    } else {
+      showToast('⚠️ Error al eliminar: ' + (data.error || 'desconocido'), '#A32D2D');
+    }
+  } catch(e) {
+    showToast('⚠️ Error de conexión', '#A32D2D');
+  }
+}
+
+function showToast(msg, color) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:${color};color:#fff;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;z-index:999;box-shadow:0 4px 12px rgba(0,0,0,.2)`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+function exportCSV() {
+  if (allData.length === 0) { alert('No hay datos para exportar.'); return; }
+  const headers = ['Nombre', 'Apellido', 'DNI', 'Unidad Operativa', 'Empresa', 'Fecha', 'Puntaje %', 'Certificado'];
+  const rows = allData.map(r => [r.nombre, r.apellido, r.dni, r.uo, r.empresa, r.fecha, r.pct, r.certified ? 'Sí' : 'No']);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'seguimiento_plan_invernal_2026.csv';
+  a.click();
+}
+
+document.getElementById('pwd').addEventListener('keydown', e => { if(e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>
