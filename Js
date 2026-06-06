@@ -1,0 +1,92 @@
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName('progreso');
+
+    // ---- GET: devolver todos los registros ----
+    if (!e.postData) {
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const rows = data.slice(1).map(row => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = row[i]);
+        return obj;
+      }).filter(r => r.dni);
+      return ContentService
+        .createTextOutput(JSON.stringify(rows))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ---- POST: crear, actualizar o eliminar ----
+    let payload;
+    try {
+      // Try JSON first
+      payload = JSON.parse(e.postData.contents);
+    } catch(ex) {
+      // Try form-encoded (URLSearchParams with 'data' field)
+      const params = e.postData.contents.split('&');
+      for (const p of params) {
+        const [k, v] = p.split('=');
+        if (decodeURIComponent(k) === 'data') {
+          payload = JSON.parse(decodeURIComponent(v.replace(/\+/g, ' ')));
+          break;
+        }
+      }
+    }
+
+    if (!payload) throw new Error('No payload received');
+
+    const data = sheet.getDataRange().getValues();
+    const headers = data[0];
+    const dniCol = headers.indexOf('dni');
+
+    // Buscar fila existente por DNI
+    let rowIndex = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][dniCol]) === String(payload.dni)) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    // ELIMINAR registro
+    if (payload._action === 'delete') {
+      if (rowIndex > 0) {
+        sheet.deleteRow(rowIndex);
+        return ContentService
+          .createTextOutput(JSON.stringify({ ok: true }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService
+          .createTextOutput(JSON.stringify({ ok: false, error: 'Registro no encontrado' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // CREAR o ACTUALIZAR registro
+    const rowData = headers.map(h => payload[h] !== undefined ? payload[h] : '');
+
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, headers.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+    }
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch(err) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ error: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
